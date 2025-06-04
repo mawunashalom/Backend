@@ -1,0 +1,232 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DB_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Utilisateur {
+  createdAt        DateTime              @default(now())
+  depenses         Depense[]
+  dgtcp            Dgtcp?
+  dossiersMedicaux DossierMedical[]
+  email            String                @unique
+  historiques      HistoriqueAction[]
+  hopital          Hopital?              @relation(fields: [hopitalId], references: [id])
+  hopitalId        Int?
+  id               Int                   @id @default(autoincrement())
+  motDePasse       String
+  nom              String
+  ordonnances      Ordonnance[]
+  patients         Patient[]
+  prenom           String
+  rendezVous       RendezVous[]
+  retraitsStock    RetraitStock[]
+  role             EnumUtilisateurRole
+  statut           EnumUtilisateurStatut @default(Actif)
+  updatedAt        DateTime              @updatedAt
+}
+
+model Employe {
+  adresse        String
+  agents         String
+  contactUrgence String
+  createdAt      DateTime          @default(now())
+  email          String
+  hopital        Hopital           @relation(fields: [hopitalId], references: [id])
+  hopitalId      Int
+  id             Int               @id @default(autoincrement())
+  nom            String
+  poste          String
+  prenom         String
+  sexe           EnumEmployeSexe
+  statut         EnumEmployeStatut @default(Actif)
+  telephone      String
+  updatedAt      DateTime          @updatedAt
+}
+
+model Hopital {
+  createdAt    DateTime          @default(now())
+  depenses     Depense[]
+  employes     Employe[]
+  id           Int               @id @default(autoincrement())
+  medicaments  Medicament[]
+  nom          String
+  patients     Patient[]
+  statut       EnumHopitalStatut @default(Actif)
+  updatedAt    DateTime          @updatedAt
+  utilisateurs Utilisateur[]
+  ville        String
+}
+
+model HistoriqueAction {
+  action        String
+  createdAt     DateTime    @default(now())
+  id            Int         @id @default(autoincrement())
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+  utilisateurId Int
+}
+
+model Dgtcp {
+  id            Int         @id @default(autoincrement())
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+  utilisateurId Int         @unique
+
+  @@map("DGTCP")
+}
+
+model Patient {
+  adresse       String
+  createdAt     DateTime         @default(now())
+  createur      Utilisateur      @relation(fields: [utilisateurId], references: [id])
+  utilisateurId Int
+  dateNaissance DateTime
+  dossiers      DossierMedical[]
+  hopital       Hopital          @relation(fields: [hopitalId], references: [id])
+  hopitalId     Int
+  id            Int              @id @default(autoincrement())
+  nom           String
+  prenom        String
+  rendezVous    RendezVous[]
+  sexe          EnumPatientSexe
+  telephone     String
+  updatedAt     DateTime         @updatedAt
+}
+
+model RendezVous {
+  createdAt     DateTime             @default(now())
+  createur      Utilisateur          @relation(fields: [utilisateurId], references: [id])
+  utilisateurId Int
+  date          DateTime
+  id            Int                  @id @default(autoincrement())
+  motif         String
+  patient       Patient              @relation(fields: [patientId], references: [id])
+  patientId     Int
+  statut        EnumRendezVousStatut @default(Actif)
+}
+
+model DossierMedical {
+  createdAt     DateTime       @default(now())
+  description   String
+  fichiers      FichierJoint[]
+  id            Int            @id @default(autoincrement())
+  ordonnances   Ordonnance[]
+  patient       Patient        @relation(fields: [patientId], references: [id])
+  patientId     Int
+  utilisateur   Utilisateur    @relation(fields: [utilisateurId], references: [id])
+  utilisateurId Int
+}
+
+model FichierJoint {
+  dossier   DossierMedical @relation(fields: [dossierId], references: [id])
+  dossierId Int
+  id        Int            @id @default(autoincrement())
+  nom       String
+  url       String
+}
+
+model Ordonnance {
+  createdAt     DateTime             @default(now())
+  dossier       DossierMedical       @relation(fields: [dossierId], references: [id])
+  dossierId     Int
+  id            Int                  @id @default(autoincrement())
+  lignes        LigneOrdonnance[]
+  statut        EnumOrdonnanceStatut @default(EN_ATTENTE)
+  utilisateur   Utilisateur          @relation(fields: [utilisateurId], references: [id])
+  utilisateurId Int
+}
+
+model LigneOrdonnance {
+  id           Int        @id @default(autoincrement())
+  medicament   Medicament @relation(fields: [medicamentId], references: [id])
+  medicamentId Int
+  ordonnance   Ordonnance @relation(fields: [ordonnanceId], references: [id])
+  ordonnanceId Int
+  quantite     Int
+}
+
+model Medicament {
+  hopital   Hopital           @relation(fields: [hopitalId], references: [id])
+  hopitalId Int
+  id        Int               @id @default(autoincrement())
+  lignes    LigneOrdonnance[]
+  nom       String
+  quantite  Int
+  retraits  RetraitStock[]
+}
+
+model RetraitStock {
+  createdAt     DateTime             @default(now())
+  id            Int                  @id @default(autoincrement())
+  medicament    Medicament           @relation(fields: [medicamentId], references: [id])
+  medicamentId  Int
+  motif         String?
+  quantite      Int
+  type          EnumRetraitStockType
+  utilisateur   Utilisateur          @relation(fields: [utilisateurId], references: [id])
+  utilisateurId Int
+}
+
+model Depense {
+  date          DateTime    @default(now())
+  hopital       Hopital     @relation(fields: [hopitalId], references: [id])
+  hopitalId     Int
+  id            Int         @id @default(autoincrement())
+  montant       Float
+  motif         String
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+  utilisateurId Int
+}
+
+enum EnumUtilisateurRole {
+  SUPER_ADMIN
+  ADMIN
+  MEDECIN
+  PHARMACIEN
+  ACCUEIL
+  COMPTABLE
+  DGTCP
+}
+
+enum EnumUtilisateurStatut {
+  Actif
+  Inactif
+}
+
+enum EnumEmployeSexe {
+  MASCULIN
+  FEMININ
+}
+
+enum EnumEmployeStatut {
+  Actif
+  Inactif
+}
+
+enum EnumHopitalStatut {
+  Actif
+  Inactif
+}
+
+enum EnumPatientSexe {
+  MASCULIN
+  FEMININ
+}
+
+enum EnumRendezVousStatut {
+  Actif
+  Inactif
+}
+
+enum EnumOrdonnanceStatut {
+  EN_ATTENTE
+  VALIDEE
+  REJETEE
+}
+
+enum EnumRetraitStockType {
+  ORDONNANCE
+  MANUEL
+}
